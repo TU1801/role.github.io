@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提议者博弈 - 10轮挑战</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2em; margin-bottom: 8px; }
+        .header p { opacity: 0.9; }
+        .progress-bar {
+            background: rgba(255,255,255,0.2);
+            height: 8px;
+            border-radius: 4px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            background: #2ecc71;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        .game-area { padding: 30px; }
+        .phase {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        .phase.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .round-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+        .round-badge {
+            background: #667eea;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 1.1em;
+        }
+        .total-earnings {
+            background: #2ecc71;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 1.1em;
+        }
+        .role-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+        .role-card h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.4em;
+        }
+        .money-display {
+            font-size: 2.5em;
+            color: #2ecc71;
+            font-weight: bold;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .slider-container { margin: 25px 0; }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #555;
+            font-size: 1.1em;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.5);
+        }
+        .split-visual {
+            display: flex;
+            height: 60px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .split-proposer {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: width 0.3s ease;
+        }
+        .split-responder {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: width 0.3s ease;
+        }
+        .btn {
+            padding: 14px 35px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 8px;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.6);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+        }
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.6);
+        }
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+        .result-box {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .result-box h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px 15px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+            font-size: 0.95em;
+        }
+        .info-box h4 {
+            color: #1976d2;
+            margin-bottom: 5px;
+        }
+        .timer {
+            font-size: 1.1em;
+            color: #e74c3c;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.8em;
+            margin: 0 auto 15px;
+        }
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.95em;
+        }
+        .history-table th,
+        .history-table td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        .history-table th {
+            background: #667eea;
+            color: white;
+            font-size: 0.9em;
+        }
+        .history-table tr:hover { background: #f8f9fa; }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        .badge-accepted {
+            background: #d4edda;
+            color: #155724;
+        }
+        .badge-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-card h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        .stat-card .number {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #333;
+        }
+        .final-stats {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .final-stats h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        .final-stats .big-number {
+            font-size: 3.5em;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .role-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 2px;
+        }
+        .tag-proposer {
+            background: #667eea;
+            color: white;
+        }
+        .tag-responder {
+            background: #f5576c;
+            color: white;
+        }
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f0f;
+            animation: confetti-fall 3s linear forwards;
+            z-index: 1000;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.5em; }
+            .game-area { padding: 15px; }
+            .money-display { font-size: 2em; }
+            .round-info { flex-direction: column; gap: 10px; }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 提议者博弈 - 10轮挑战</h1>
+            <p>与另一位玩家对战，10轮后输出总收益</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="game-area">
+            <!-- 开始界面 -->
+            <div id="phase-start" class="phase active">
+                <div class="role-card">
+                    <h2>📖 游戏规则</h2>
+                    <ul style="margin-left: 20px; line-height: 2;">
+                        <li><strong>10轮挑战</strong>，每轮角色随机分配（提议者或响应者）</li>
+                        <li><strong>总奖金：</strong>每轮100元</li>
+                        <li><strong>提议者：</strong>决定如何分配100元</li>
+                        <li><strong>响应者：</strong>决定接受或拒绝</li>
+                        <li><strong>接受：</strong>双方按提议分配获得奖金</li>
+                        <li><strong>拒绝：</strong>双方都得不到任何奖金</li>
+                    </ul>
+                    <br>
+                    <div class="info-box">
+                        <h4>💡 关于对手</h4>
+                        <p>你的对手是一位匿名玩家，其行为基于<strong>经典提议者博弈实验</strong>中真实人类玩家的决策数据。</p>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="startGame()">🚀 开始10轮挑战</button>
+                </div>
+            </div>
+
+            <!-- 角色揭示 -->
+            <div id="phase-role-reveal" class="phase">
+                <div class="role-card" style="text-align: center;">
+                    <div class="avatar pulse" id="role-avatar">❓</div>
+                    <h2 id="role-title">第1轮</h2>
+                    <p style="font-size: 1.2em; margin-top: 10px;">你的角色是...</p>
+                    <div style="margin-top: 20px; font-size: 1.5em; font-weight: bold;" id="role-display"></div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="proceedToGame()">继续</button>
+                </div>
+            </div>
+
+            <!-- 提议者阶段 -->
+            <div id="phase-proposer" class="phase">
+                <div class="round-info">
+                    <span class="round-badge">第 <span id="prop-round">1</span>/10 轮</span>
+                    <span class="total-earnings">当前总收益: <span id="prop-earnings">0</span>元</span>
+                </div>
+
+                <div class="role-card">
+                    <div class="avatar">💼</div>
+                    <h2 style="text-align: center;">你是提议者</h2>
+                    <p style="text-align: center;">你有 <span class="money-display">100元</span> 需要分配</p>
+                </div>
+
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>你保留: <strong id="prop-amount">50元</strong></span>
+                        <span>给对方: <strong id="resp-amount">50元</strong></span>
+                    </div>
+                    <input type="range" id="split-slider" min="0" max="100" value="50" oninput="updateSplit(this.value)">
+                </div>
+
+                <div class="split-visual">
+                    <div class="split-proposer" id="split-bar-proposer" style="width: 50%;">你: 50元</div>
+                    <div class="split-responder" id="split-bar-responder" style="width: 50%;">对方: 50元</div>
+                </div>
+
+                <div class="info-box">
+                    <h4>🤔 对方可能的反应（基于实验数据）</h4>
+                    <p id="think-tip">对方接受概率估计: 约95%</p>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="submitProposal()">✅ 提交提议</button>
+                </div>
+            </div>
+
+            <!-- 等待对方响应 -->
+            <div id="phase-waiting" class="phase">
+                <div class="round-info">
+                    <span class="round-badge">第 <span id="wait-round">1</span>/10 轮</span>
+                    <span class="total-earnings">当前总收益: <span id="wait-earnings">0</span>元</span>
+                </div>
+                <div class="role-card" style="text-align: center;">
+                    <div class="avatar pulse">👤</div>
+                    <h2>对方正在思考...</h2>
+                    <p>你提议：你获得 <strong id="waiting-prop">50元</strong>，对方获得 <strong id="waiting-resp">50元</strong></p>
+                    <div class="timer">对方正在评估这个方案...</div>
+                </div>
+            </div>
+
+            <!-- 响应者阶段 -->
+            <div id="phase-responder" class="phase">
+                <div class="round-info">
+                    <span class="round-badge">第 <span id="resp-round">1</span>/10 轮</span>
+                    <span class="total-earnings">当前总收益: <span id="resp-earnings">0</span>元</span>
+                </div>
+
+                <div class="role-card">
+                    <div class="avatar">🤔</div>
+                    <h2 style="text-align: center;">你是响应者</h2>
+                    <p style="text-align: center;">对方提出了以下分配方案：</p>
+                </div>
+
+                <div class="split-visual" style="height: 70px;">
+                    <div class="split-proposer" id="offer-bar-proposer" style="width: 50%;">对方: 50元</div>
+                    <div class="split-responder" id="offer-bar-responder" style="width: 50%;">你: 50元</div>
+                </div>
+
+                <div class="result-box">
+                    <p style="font-size: 1.1em;">对方获得：<span style="font-size: 1.3em; font-weight: bold; color: #667eea;" id="offer-prop-display">50元</span></p>
+                    <p style="font-size: 1.1em; margin-top: 8px;">你获得：<span style="font-size: 1.3em; font-weight: bold; color: #f5576c;" id="offer-resp-display">50元</span></p>
+                </div>
+
+                <div class="info-box">
+                    <h4>⚠️ 重要提醒</h4>
+                    <p>如果你拒绝，双方都得不到任何钱！</p>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="respond(true)">✅ 接受</button>
+                    <button class="btn btn-danger" onclick="respond(false)">❌ 拒绝</button>
+                </div>
+            </div>
+
+            <!-- 单轮结果 -->
+            <div id="phase-round-result" class="phase">
+                <div class="round-info">
+                    <span class="round-badge">第 <span id="result-round">1</span>/10 轮</span>
+                    <span class="total-earnings">当前总收益: <span id="result-earnings">0</span>元</span>
+                </div>
+                <div id="round-result-content"></div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="nextRound()">➡️ 进入下一轮</button>
+                </div>
+            </div>
+
+            <!-- 最终结果 -->
+            <div id="phase-final" class="phase">
+                <div class="final-stats">
+                    <h2>🎉 10轮挑战完成！</h2>
+                    <div class="big-number" id="final-total">0元</div>
+                    <p style="font-size: 1.2em; opacity: 0.9;">这是你的最终总收益</p>
+                </div>
+
+                <div id="final-details"></div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="restartGame()">🔄 再来一次</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 游戏状态 ====================
+        let gameState = {
+            totalRounds: 10,
+            currentRound: 0,
+            totalEarnings: 0,
+            roundHistory: [],
+            currentRole: null,
+            currentProposal: null,
+            roundEarnings: 0,
+            roleSequence: []  // 预生成的角色序列
+        };
+
+        // ==================== 经典实验数据模型 ====================
+        const PROPOSER_DISTRIBUTION = [
+            { proposer: 50, responder: 50, weight: 0.35 },
+            { proposer: 45, responder: 55, weight: 0.15 },
+            { proposer: 40, responder: 60, weight: 0.10 },
+            { proposer: 48, responder: 52, weight: 0.10 },
+            { proposer: 42, responder: 58, weight: 0.08 },
+            { proposer: 55, responder: 45, weight: 0.08 },
+            { proposer: 60, responder: 40, weight: 0.06 },
+            { proposer: 35, responder: 65, weight: 0.04 },
+            { proposer: 65, responder: 35, weight: 0.03 },
+            { proposer: 30, responder: 70, weight: 0.01 },
+        ];
+
+        function getAcceptProbability(offeredAmount) {
+            if (offeredAmount >= 50) return 0.98;
+            if (offeredAmount >= 45) return 0.95;
+            if (offeredAmount >= 40) return 0.90;
+            if (offeredAmount >= 35) return 0.80;
+            if (offeredAmount >= 30) return 0.65;
+            if (offeredAmount >= 25) return 0.45;
+            if (offeredAmount >= 20) return 0.25;
+            if (offeredAmount >= 15) return 0.10;
+            if (offeredAmount >= 10) return 0.05;
+            return 0.02;
+        }
+
+        // ==================== 生成均衡角色序列 ====================
+        function generateBalancedRoleSequence() {
+            // 10轮中，5轮提议者 + 5轮响应者，随机打乱顺序
+            let sequence = [];
+            for (let i = 0; i < 5; i++) {
+                sequence.push('proposer');
+                sequence.push('responder');
+            }
+            // Fisher-Yates 洗牌算法
+            for (let i = sequence.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [sequence[i], sequence[j]] = [sequence[j], sequence[i]];
+            }
+            return sequence;
+        }
+
+        // ==================== 核心函数 ====================
+
+        function showPhase(phaseId) {
+            document.querySelectorAll('.phase').forEach(p => p.classList.remove('active'));
+            document.getElementById(phaseId).classList.add('active');
+        }
+
+        function updateProgress() {
+            const pct = (gameState.currentRound / gameState.totalRounds) * 100;
+            document.getElementById('progress-fill').style.width = pct + '%';
+        }
+
+        function startGame() {
+            gameState.currentRound = 0;
+            gameState.totalEarnings = 0;
+            gameState.roundHistory = [];
+            // 预生成均衡角色序列
+            gameState.roleSequence = generateBalancedRoleSequence();
+            updateProgress();
+            nextRound();
+        }
+
+        function nextRound() {
+            gameState.currentRound++;
+            updateProgress();
+
+            if (gameState.currentRound > gameState.totalRounds) {
+                showFinalResults();
+                return;
+            }
+
+            // 从预生成的均衡序列中读取角色
+            gameState.currentRole = gameState.roleSequence[gameState.currentRound - 1];
+
+            document.getElementById('role-avatar').textContent = gameState.currentRole === 'proposer' ? '💼' : '🤔';
+            document.getElementById('role-title').textContent = '第' + gameState.currentRound + '轮';
+            document.getElementById('role-display').innerHTML = 
+                gameState.currentRole === 'proposer' ? 
+                '<span style="color: #667eea;">💼 提议者</span>' : 
+                '<span style="color: #f5576c;">🤔 响应者</span>';
+
+            showPhase('phase-role-reveal');
+        }
+
+        function proceedToGame() {
+            if (gameState.currentRole === 'proposer') {
+                setupProposerRound();
+            } else {
+                setupResponderRound();
+            }
+        }
+
+        // ==================== 提议者阶段（你是提议者） ====================
+
+        function setupProposerRound() {
+            document.getElementById('prop-round').textContent = gameState.currentRound;
+            document.getElementById('prop-earnings').textContent = gameState.totalEarnings;
+            document.getElementById('split-slider').value = 50;
+            updateSplit(50);
+            showPhase('phase-proposer');
+        }
+
+        function updateSplit(value) {
+            const proposerAmount = parseInt(value);
+            const responderAmount = 100 - proposerAmount;
+
+            document.getElementById('prop-amount').textContent = proposerAmount + '元';
+            document.getElementById('resp-amount').textContent = responderAmount + '元';
+
+            document.getElementById('split-bar-proposer').style.width = proposerAmount + '%';
+            document.getElementById('split-bar-responder').style.width = responderAmount + '%';
+            document.getElementById('split-bar-proposer').textContent = '你: ' + proposerAmount + '元';
+            document.getElementById('split-bar-responder').textContent = '对方: ' + responderAmount + '元';
+
+            const prob = getAcceptProbability(responderAmount);
+            const probPct = (prob * 100).toFixed(0);
+            let tipText = '对方接受概率估计: 约' + probPct + '%';
+
+            if (responderAmount >= 50) {
+                tipText += '（非常公平，对方几乎必接受）';
+            } else if (responderAmount >= 40) {
+                tipText += '（比较公平，对方大概率接受）';
+            } else if (responderAmount >= 30) {
+                tipText += '（有风险，对方可能拒绝）';
+            } else if (responderAmount >= 20) {
+                tipText += '（高风险，对方很可能拒绝）';
+            } else {
+                tipText += '（极不公平，对方几乎必拒绝）';
+            }
+
+            document.getElementById('think-tip').textContent = tipText;
+        }
+
+        function submitProposal() {
+            const slider = document.getElementById('split-slider');
+            const propAmount = parseInt(slider.value);
+            const respAmount = 100 - propAmount;
+
+            gameState.currentProposal = { 
+                proposer: propAmount, 
+                responder: respAmount 
+            };
+
+            document.getElementById('wait-round').textContent = gameState.currentRound;
+            document.getElementById('wait-earnings').textContent = gameState.totalEarnings;
+            document.getElementById('waiting-prop').textContent = propAmount + '元';
+            document.getElementById('waiting-resp').textContent = respAmount + '元';
+
+            showPhase('phase-waiting');
+
+            setTimeout(() => {
+                const accepted = opponentResponderDecision(respAmount);
+                processRoundResult(accepted, 'proposer');
+            }, 2000);
+        }
+
+        function opponentResponderDecision(offeredAmount) {
+            const prob = getAcceptProbability(offeredAmount);
+            return Math.random() < prob;
+        }
+
+        // ==================== 响应者阶段（你是响应者） ====================
+
+        function setupResponderRound() {
+            document.getElementById('resp-round').textContent = gameState.currentRound;
+            document.getElementById('resp-earnings').textContent = gameState.totalEarnings;
+
+            const opponentProposal = generateOpponentProposal();
+            gameState.currentProposal = opponentProposal;
+
+            const prop = opponentProposal.proposer;
+            const resp = opponentProposal.responder;
+
+            document.getElementById('offer-bar-proposer').style.width = prop + '%';
+            document.getElementById('offer-bar-responder').style.width = resp + '%';
+            document.getElementById('offer-bar-proposer').textContent = '对方: ' + prop + '元';
+            document.getElementById('offer-bar-responder').textContent = '你: ' + resp + '元';
+
+            document.getElementById('offer-prop-display').textContent = prop + '元';
+            document.getElementById('offer-resp-display').textContent = resp + '元';
+
+            showPhase('phase-responder');
+        }
+
+        function generateOpponentProposal() {
+            const random = Math.random();
+            let cumulative = 0;
+
+            for (let item of PROPOSER_DISTRIBUTION) {
+                cumulative += item.weight;
+                if (random <= cumulative) {
+                    return {
+                        proposer: item.proposer,
+                        responder: item.responder
+                    };
+                }
+            }
+
+            return { proposer: 50, responder: 50 };
+        }
+
+        function respond(accepted) {
+            processRoundResult(accepted, 'responder');
+        }
+
+        // ==================== 结果处理 ====================
+
+        function processRoundResult(accepted, playerRole) {
+            const prop = gameState.currentProposal.proposer;
+            const resp = gameState.currentProposal.responder;
+            let roundEarnings = 0;
+
+            if (accepted) {
+                roundEarnings = playerRole === 'proposer' ? prop : resp;
+                gameState.totalEarnings += roundEarnings;
+            }
+
+            gameState.roundEarnings = roundEarnings;
+
+            gameState.roundHistory.push({
+                round: gameState.currentRound,
+                role: playerRole,
+                proposal: { proposer: prop, responder: resp },
+                accepted: accepted,
+                earnings: roundEarnings
+            });
+
+            showRoundResult(accepted, playerRole, prop, resp, roundEarnings);
+        }
+
+        function showRoundResult(accepted, playerRole, prop, resp, earnings) {
+            document.getElementById('result-round').textContent = gameState.currentRound;
+            document.getElementById('result-earnings').textContent = gameState.totalEarnings;
+
+            let resultHTML = '';
+
+            if (accepted) {
+                createConfetti();
+                resultHTML = `
+                    <div class="role-card" style="text-align: center; border-left-color: #2ecc71;">
+                        <div class="avatar" style="background: linear-gradient(135deg, #2ecc71, #27ae60);">✅</div>
+                        <h2 style="color: #27ae60;">提议被接受！</h2>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h4>本轮收益</h4>
+                            <div class="number" style="color: #2ecc71;">${earnings}元</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>累计总收益</h4>
+                            <div class="number">${gameState.totalEarnings}元</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                resultHTML = `
+                    <div class="role-card" style="text-align: center; border-left-color: #e74c3c;">
+                        <div class="avatar" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">❌</div>
+                        <h2 style="color: #e74c3c;">提议被拒绝！</h2>
+                        <p>双方都一无所获</p>
+                    </div>
+                    <div class="result-box" style="background: #ffebee;">
+                        <h3 style="color: #c0392b;">💸 本轮收益: 0元</h3>
+                        <p>累计总收益: ${gameState.totalEarnings}元</p>
+                    </div>
+                `;
+            }
+
+            const fairness = resp / 100;
+            let analysis = '';
+            if (fairness >= 0.45) {
+                analysis = '这是一个相当公平的分配，符合实验中的"公平偏好"行为。';
+            } else if (fairness >= 0.35) {
+                analysis = '这个分配略偏向提议者，但在实验中的可接受范围内。';
+            } else if (fairness >= 0.25) {
+                analysis = '这个分配比较不公平，接近实验中的"拒绝阈值"。';
+            } else {
+                analysis = '这个分配非常不公平，实验中大多数响应者会拒绝此类提议。';
+            }
+
+            resultHTML += `
+                <div class="info-box">
+                    <h4>📊 本轮分配</h4>
+                    <p>提议者: ${prop}元 | 响应者: ${resp}元 | 结果: ${accepted ? '接受' : '拒绝'}</p>
+                    <p style="margin-top: 8px;">${analysis}</p>
+                </div>
+            `;
+
+            document.getElementById('round-result-content').innerHTML = resultHTML;
+            showPhase('phase-round-result');
+        }
+
+        // ==================== 最终结果 ====================
+
+        function showFinalResults() {
+            const total = gameState.totalEarnings;
+            const maxPossible = gameState.totalRounds * 100;
+            const efficiency = ((total / maxPossible) * 100).toFixed(1);
+
+            document.getElementById('final-total').textContent = total + '元';
+
+            let tableHTML = `
+                <div class="role-card">
+                    <h2>📋 详细记录</h2>
+                    <table class="history-table">
+                        <tr>
+                            <th>轮次</th>
+                            <th>你的角色</th>
+                            <th>提议者</th>
+                            <th>响应者</th>
+                            <th>结果</th>
+                            <th>本轮收益</th>
+                        </tr>
+            `;
+
+            gameState.roundHistory.forEach(h => {
+                const badge = h.accepted ? 
+                    '<span class="badge badge-accepted">✅</span>' : 
+                    '<span class="badge badge-rejected">❌</span>';
+                const roleTag = h.role === 'proposer' ? 
+                    '<span class="role-tag tag-proposer">提议者</span>' : 
+                    '<span class="role-tag tag-responder">响应者</span>';
+
+                tableHTML += `
+                    <tr>
+                        <td>第${h.round}轮</td>
+                        <td>${roleTag}</td>
+                        <td>${h.proposal.proposer}元</td>
+                        <td>${h.proposal.responder}元</td>
+                        <td>${badge}</td>
+                        <td><strong>${h.earnings}元</strong></td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</table></div>';
+
+            const asProposer = gameState.roundHistory.filter(h => h.role === 'proposer');
+            const asResponder = gameState.roundHistory.filter(h => h.role === 'responder');
+            const propEarnings = asProposer.reduce((s, h) => s + h.earnings, 0);
+            const respEarnings = asResponder.reduce((s, h) => s + h.earnings, 0);
+            const acceptedCount = gameState.roundHistory.filter(h => h.accepted).length;
+
+            tableHTML += `
+                <div class="stats-grid" style="margin-top: 20px;">
+                    <div class="stat-card">
+                        <h4>作为提议者收益</h4>
+                        <div class="number">${propEarnings}元</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>作为响应者收益</h4>
+                        <div class="number">${respEarnings}元</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>接受率</h4>
+                        <div class="number">${acceptedCount}/10</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>效率</h4>
+                        <div class="number">${efficiency}%</div>
+                    </div>
+                </div>
+            `;
+
+            let evaluation = '';
+            if (total >= 450) {
+                evaluation = '🏆 卓越！你是博弈论大师！';
+            } else if (total >= 350) {
+                evaluation = '⭐ 优秀！你很好地平衡了公平与收益。';
+            } else if (total >= 250) {
+                evaluation = '👍 良好！还有提升空间。';
+            } else if (total >= 150) {
+                evaluation = '🤔 一般。试着更策略性地分配。';
+            } else {
+                evaluation = '💡 建议：作为提议者多给一些，作为响应者适当接受小额提议。';
+            }
+
+            tableHTML += `
+                <div class="result-box" style="margin-top: 20px; background: linear-gradient(135deg, #667eea20, #764ba220);">
+                    <h3>${evaluation}</h3>
+                    <p>理论最大收益: 1000元 | 你的收益: ${total}元 | 对手基于经典实验数据决策</p>
+                </div>
+            `;
+
+            document.getElementById('final-details').innerHTML = tableHTML;
+            showPhase('phase-final');
+            createConfetti();
+        }
+
+        function restartGame() {
+            gameState.currentRound = 0;
+            gameState.totalEarnings = 0;
+            gameState.roundHistory = [];
+            gameState.roleSequence = [];
+            updateProgress();
+            document.getElementById('split-slider').value = 50;
+            updateSplit(50);
+            showPhase('phase-start');
+        }
+
+        function createConfetti() {
+            const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#2ecc71', '#f1c40f', '#e74c3c'];
+            for (let i = 0; i < 40; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + 'vw';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    document.body.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 4000);
+                }, i * 60);
+            }
+        }
+
+        updateSplit(50);
+    </script>
+</body>
+</html>
